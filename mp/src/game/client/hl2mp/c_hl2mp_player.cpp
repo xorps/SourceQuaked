@@ -23,6 +23,8 @@
 #undef CHL2MP_Player	
 #endif
 
+#define CYCLELATCH_TOLERANCE		0.15f
+
 LINK_ENTITY_TO_CLASS( player, C_HL2MP_Player );
 
 BEGIN_RECV_TABLE_NOBASE( C_HL2MP_Player, DT_HL2MPLocalPlayerExclusive )
@@ -35,6 +37,8 @@ BEGIN_RECV_TABLE_NOBASE( C_HL2MP_Player, DT_HL2MPNonLocalPlayerExclusive )
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
+
+	RecvPropInt( RECVINFO( m_cycleLatch ), 0, &C_HL2MP_Player::RecvProxy_CycleLatch ),
 END_RECV_TABLE()
 
 IMPLEMENT_CLIENTCLASS_DT(C_HL2MP_Player, DT_HL2MP_Player, CHL2MP_Player)
@@ -80,6 +84,8 @@ C_HL2MP_Player::C_HL2MP_Player() : m_iv_angEyeAngles( "C_HL2MP_Player::m_iv_angE
 	m_blinkTimer.Invalidate();
 
 	m_pFlashlightBeam = NULL;
+
+	m_flServerCycle = -1.0f;
 }
 
 C_HL2MP_Player::~C_HL2MP_Player( void )
@@ -518,6 +524,19 @@ void C_HL2MP_Player::PostDataUpdate( DataUpdateType_t updateType )
 	}
 
 	BaseClass::PostDataUpdate( updateType );
+}
+
+void C_HL2MP_Player::RecvProxy_CycleLatch( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	C_HL2MP_Player* pPlayer = static_cast<C_HL2MP_Player*>( pStruct );
+
+	float flServerCycle = (float)pData->m_Value.m_Int / 16.0f;
+	float flCurCycle = pPlayer->GetCycle();
+	// The cycle is way out of sync.
+	if ( fabs( flCurCycle - flServerCycle ) > CYCLELATCH_TOLERANCE )
+	{
+		pPlayer->SetServerIntendedCycle( flServerCycle );
+	}
 }
 
 void C_HL2MP_Player::ReleaseFlashlight( void )
