@@ -40,6 +40,8 @@ extern CBaseEntity				*g_pLastSpawn;
 
 #define HL2MP_COMMAND_MAX_RATE 0.3
 
+#define CYCLELATCH_UPDATE_INTERVAL	0.2f
+
 void DropPrimedFragGrenade( CHL2MP_Player *pPlayer, CBaseCombatWeapon *pGrenade );
 
 LINK_ENTITY_TO_CLASS( player, CHL2MP_Player );
@@ -71,6 +73,9 @@ BEGIN_SEND_TABLE_NOBASE( CHL2MP_Player, DT_HL2MPNonLocalPlayerExclusive )
 	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_COORD_MP_LOWPRECISION|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 	SendPropFloat( SENDINFO_VECTORELEM(m_angEyeAngles, 0), 8, SPROP_CHANGES_OFTEN, -90.0f, 90.0f ),
 	SendPropAngle( SENDINFO_VECTORELEM(m_angEyeAngles, 1), 10, SPROP_CHANGES_OFTEN ),
+	// Only need to latch cycle for other players
+	// If you increase the number of bits networked, make sure to also modify the code below and in the client class.
+	SendPropInt( SENDINFO( m_cycleLatch ), 4, SPROP_UNSIGNED ),
 END_SEND_TABLE()
 
 IMPLEMENT_SERVERCLASS_ST(CHL2MP_Player, DT_HL2MP_Player)
@@ -157,6 +162,9 @@ CHL2MP_Player::CHL2MP_Player()
 
 	m_bEnterObserver = false;
 	m_bReady = false;
+
+	m_cycleLatch = 0;
+	m_cycleLatchTimer.Invalidate();
 
 	BaseClass::ChangeTeam( 0 );
 	
@@ -378,6 +386,8 @@ void CHL2MP_Player::Spawn(void)
 
 	m_bReady = false;
 
+	m_cycleLatchTimer.Start( CYCLELATCH_UPDATE_INTERVAL );
+
 	//Tony; do the spawn animevent
 	DoAnimationEvent( PLAYERANIMEVENT_SPAWN );
 
@@ -587,6 +597,13 @@ void CHL2MP_Player::PostThink( void )
 	// Store the eye angles pitch so the client can compute its animation state correctly.
 	m_angEyeAngles = EyeAngles();
 	m_PlayerAnimState->Update( m_angEyeAngles[YAW], m_angEyeAngles[PITCH] );
+
+	if ( IsAlive() && m_cycleLatchTimer.IsElapsed() )
+	{
+		m_cycleLatchTimer.Start( CYCLELATCH_UPDATE_INTERVAL );
+		// Compress the cycle into 4 bits. Can represent 0.0625 in steps which is enough.
+		m_cycleLatch.GetForModify() = 16 * GetCycle();
+	}
 }
 
 void CHL2MP_Player::PlayerDeathThink()
