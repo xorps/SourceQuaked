@@ -2882,7 +2882,7 @@ void KeyValues::UnpackIntoStructure( KeyValuesUnpackStructure const *pUnpackTabl
 				Assert( dest_field + pUnpackTable->m_nFieldSize < pDestEnd );
 
 				char *dest_s=(char *) dest_field;
-				strncpy( dest_s, GetString( pUnpackTable->m_pKeyName,
+				Q_strncpy( dest_s, GetString( pUnpackTable->m_pKeyName,
 											pUnpackTable->m_pKeyDefault ),
 						 pUnpackTable->m_nFieldSize );
 
