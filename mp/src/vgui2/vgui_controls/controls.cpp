@@ -37,7 +37,7 @@ bool VGui_InitInterfacesList( const char *moduleName, CreateInterfaceFn *factory
 	}
 #endif	
 	// keep a record of this module name
-	strncpy(g_szControlsModuleName, moduleName, sizeof(g_szControlsModuleName));
+	Q_strncpy(g_szControlsModuleName, moduleName, sizeof(g_szControlsModuleName));
 	g_szControlsModuleName[sizeof(g_szControlsModuleName) - 1] = 0;
 
 	// initialize our locale (must be done for every vgui dll/exe)
