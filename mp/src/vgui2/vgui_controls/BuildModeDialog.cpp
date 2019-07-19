@@ -57,6 +57,7 @@ public:
 		BaseClass( parent, panelName )
 	{
 	}
+	~CSmallTextEntry() {}
 
 	virtual void ApplySchemeSettings( IScheme *scheme )
 	{
@@ -133,6 +134,7 @@ public:
 			m_pFileCombo->AddItem(g_pVGuiLocalize->GetLocalizationFileName(i), NULL);
 		}
 	}
+	~BuildModeLocalizedStringEditDialog() {}
 #pragma warning( default : 4355 )
 
 	virtual void DoModal(const char *token)
@@ -293,6 +295,7 @@ public:
 	{
 		m_hContext = context;
 	}
+	~CBuildModeNavCombo() {}
 	
 	virtual void OnShowMenu(Menu *menu)
 	{

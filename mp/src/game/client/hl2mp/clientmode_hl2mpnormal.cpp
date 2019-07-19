@@ -46,6 +46,10 @@ ClientModeHL2MPNormal* GetClientModeHL2MPNormal()
 //-----------------------------------------------------------------------------
 class CHudViewport : public CBaseViewport
 {
+public:
+	CHudViewport() : CBaseViewport() {}
+	~CHudViewport() {}
+
 private:
 	DECLARE_CLASS_SIMPLE( CHudViewport, CBaseViewport );
 

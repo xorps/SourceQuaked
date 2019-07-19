@@ -28,6 +28,8 @@ public:
 	{
 	}
 
+	~CaptionLabel() {}
+
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme )
 	{
 		Label::ApplySchemeSettings( pScheme );
