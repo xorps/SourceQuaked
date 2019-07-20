@@ -17,10 +17,12 @@ target_compile_definitions(server PRIVATE
     HL2_DLL
 #    HL2_EPISODIC
     USE_NAV_MESH
+    _DLL_EXT=.dll
 )
 
 target_link_options(server PRIVATE
     /NODEFAULTLIB:libcmt
+    /NODEFAULTLIB:libcmtd
 )
 
 if(WIN32 AND MSVC AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
@@ -448,6 +450,7 @@ target_compile_definitions(client PRIVATE
     _snprintf=use_Q_snprintf_instead
     fopen=dont_use_fopen
     CURL_STATICLIB
+    _DLL_EXT=.dll
 )
 
 target_include_directories(client PRIVATE
@@ -828,7 +831,9 @@ target_link_libraries(client PRIVATE
 )
 
 target_link_options(client PRIVATE
-    /SAFESEH:NO # matsys_controls.lib
-    /NODEFAULTLIB:LIBC
+    /SAFESEH:NO             # for matsys_controls.lib
+    /NODEFAULTLIB:libc
+    /NODEFAULTLIB:libcd
     /NODEFAULTLIB:libcmt
+    /NODEFAULTLIB:libcmtd
 )
