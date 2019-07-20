@@ -30,11 +30,13 @@ bool VGui_InitInterfacesList( const char *moduleName, CreateInterfaceFn *factory
 	// If you hit this error, then you need to include memoverride.cpp in the project somewhere or else
 	// you'll get crashes later when vgui_controls allocates KeyValues and vgui tries to delete them.
 #if !defined(NO_MALLOC_OVERRIDE) && defined( WIN32 )
+#if 0
 	if ( _heapmin() != 1 )
 	{
 		Assert( false );
 		Error( "Must include memoverride.cpp in your project." );
 	}
+#endif
 #endif	
 	// keep a record of this module name
 	Q_strncpy(g_szControlsModuleName, moduleName, sizeof(g_szControlsModuleName));
