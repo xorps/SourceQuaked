@@ -30,6 +30,7 @@ class CHudAmmo : public CHudNumericDisplay, public CHudElement
 
 public:
 	CHudAmmo( const char *pElementName );
+	~CHudAmmo() {}
 	void Init( void );
 	void VidInit( void );
 	void Reset();
@@ -365,6 +366,7 @@ public:
 
 		SetHiddenBits( HIDEHUD_HEALTH | HIDEHUD_WEAPONSELECTION | HIDEHUD_PLAYERDEAD | HIDEHUD_NEEDSUIT );
 	}
+	~CHudSecondaryAmmo() {}
 
 	void Init( void )
 	{

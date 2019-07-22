@@ -1,8 +1,15 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 
 project(SourceSDK)
 
+if(WIN32 AND MSVC AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
+else()
+    error("Unsupported platform")
+endif()
+
 add_library(server SHARED)
+
+set_property(TARGET server PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 target_compile_definitions(server PRIVATE
     RAD_TELEMETRY_DISABLED
@@ -20,15 +27,9 @@ target_compile_definitions(server PRIVATE
     _DLL_EXT=.dll
 )
 
-target_link_options(server PRIVATE
-    /NODEFAULTLIB:libcmt
-    /NODEFAULTLIB:libcmtd
+target_link_options(server PRIVATE 
+    /NODEFAULTLIB
 )
-
-if(WIN32 AND MSVC AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
-else()
-    error("Unsupported platform")
-endif()
 
 target_include_directories(server PRIVATE
     mp/src/public
@@ -220,6 +221,7 @@ target_sources(server PRIVATE
     mp/src/game/server/serverbenchmark_base.cpp
     mp/src/game/server/ServerNetworkProperty.cpp
     mp/src/game/server/SkyCamera.cpp
+    mp/src/game/server/smoke_trail.cpp
     mp/src/game/server/sound.cpp
     mp/src/game/server/soundent.cpp
     mp/src/game/server/subs.cpp
@@ -330,10 +332,22 @@ target_sources(server PRIVATE
     mp/src/game/shared/hl2mp/hl2mp_gamerules.cpp
     mp/src/game/shared/hl2mp/hl2mp_player_shared.cpp
     mp/src/game/shared/hl2mp/hl2mp_weapon_parse.cpp
+    mp/src/game/shared/hl2mp/weapon_357.cpp
+    mp/src/game/shared/hl2mp/weapon_ar2.cpp
+    mp/src/game/shared/hl2mp/weapon_crossbow.cpp
+    mp/src/game/shared/hl2mp/weapon_crowbar.cpp
     mp/src/game/shared/hl2mp/weapon_frag.cpp
     mp/src/game/shared/hl2mp/weapon_hl2mpbase.cpp
+    mp/src/game/shared/hl2mp/weapon_hl2mpbase_machinegun.cpp
+    mp/src/game/shared/hl2mp/weapon_hl2mpbasebasebludgeon.cpp
     mp/src/game/shared/hl2mp/weapon_hl2mpbasehlmpcombatweapon.cpp
     mp/src/game/shared/hl2mp/weapon_physcannon.cpp
+    mp/src/game/shared/hl2mp/weapon_pistol.cpp
+    mp/src/game/shared/hl2mp/weapon_rpg.cpp
+    mp/src/game/shared/hl2mp/weapon_shotgun.cpp
+    mp/src/game/shared/hl2mp/weapon_slam.cpp
+    mp/src/game/shared/hl2mp/weapon_smg1.cpp
+    mp/src/game/shared/hl2mp/weapon_stunstick.cpp
     mp/src/game/shared/igamesystem.cpp
     mp/src/game/shared/interval.cpp
     mp/src/game/shared/mapentities_shared.cpp
@@ -349,6 +363,7 @@ target_sources(server PRIVATE
     mp/src/game/shared/physics_main_shared.cpp
     mp/src/game/shared/precache_register.cpp
     mp/src/game/shared/predictableid.cpp
+    mp/src/game/shared/predicted_viewmodel.cpp
     mp/src/game/shared/props_shared.cpp
     mp/src/game/shared/querycache.cpp
     mp/src/game/shared/ragdoll_shared.cpp
@@ -389,7 +404,10 @@ target_sources(server PRIVATE
     mp/src/public/simple_physics.cpp
     mp/src/public/studio.cpp
     mp/src/public/stringregistry.cpp
+    mp/src/public/strings.cpp
     mp/src/public/SoundParametersInternal.cpp
+    mp/src/public/valve_alloc.cpp
+    mp/src/public/valve_alloc_crt.cpp
     mp/src/tier1/bitbuf.cpp
     mp/src/tier1/byteswap.cpp
     mp/src/tier1/characterset.cpp
@@ -423,8 +441,6 @@ target_sources(server PRIVATE
 )
 
 target_link_libraries(server PRIVATE
-    Rpcrt4.lib # UidCreate
-    legacy_stdio_definitions # _sscanf
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/dmxloader.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/particles.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/steam_api.lib
@@ -432,9 +448,18 @@ target_link_libraries(server PRIVATE
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/tier2.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/tier3.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/vstdlib.lib
+    Rpcrt4.lib # UidCreate
+    legacy_stdio_definitions.lib # _sscanf
+    legacy_stdio_wide_specifiers.lib
+    libcmt.lib
+    libcpmt.lib
+    libvcruntime.lib
+    libucrt.lib
 )
 
 add_library(client SHARED)
+
+set_property(TARGET client PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 target_compile_definitions(client PRIVATE
     RAD_TELEMETRY_DISABLED
@@ -479,6 +504,7 @@ target_sources(client PRIVATE
     mp/src/game/client/c_baseanimatingoverlay.cpp
     mp/src/game/client/c_basecombatcharacter.cpp
     mp/src/game/client/c_basecombatweapon.cpp
+    mp/src/game/client/c_basedoor.cpp
     mp/src/game/client/c_baseentity.cpp
     mp/src/game/client/c_baseflex.cpp
     mp/src/game/client/c_baseplayer.cpp
@@ -487,14 +513,29 @@ target_sources(client PRIVATE
     mp/src/game/client/c_breakableprop.cpp
     mp/src/game/client/c_effects.cpp
     mp/src/game/client/c_entitydissolve.cpp
+    mp/src/game/client/c_entityparticletrail.cpp
+    mp/src/game/client/c_env_fog_controller.cpp
     mp/src/game/client/c_fire_smoke.cpp
+    mp/src/game/client/c_func_areaportalwindow.cpp
+    mp/src/game/client/c_func_breakablesurf.cpp
     mp/src/game/client/c_func_dust.cpp
+    mp/src/game/client/c_func_lod.cpp
+    mp/src/game/client/c_func_occluder.cpp
     mp/src/game/client/c_func_reflective_glass.cpp
+    mp/src/game/client/c_func_smokevolume.cpp
+    mp/src/game/client/c_func_tracktrain.cpp
     mp/src/game/client/c_impact_effects.cpp
+    mp/src/game/client/c_info_overlay_accessor.cpp
+    mp/src/game/client/c_particle_system.cpp
     mp/src/game/client/c_pixel_visibility.cpp
+    mp/src/game/client/c_physbox.cpp
+    mp/src/game/client/c_physmagnet.cpp
+    mp/src/game/client/c_physicsprop.cpp
     mp/src/game/client/c_point_camera.cpp
     mp/src/game/client/c_point_commentary_node.cpp
     mp/src/game/client/c_playerresource.cpp
+    mp/src/game/client/c_plasma.cpp
+    mp/src/game/client/c_props.cpp
     mp/src/game/client/c_sceneentity.cpp
     mp/src/game/client/c_te.cpp
     mp/src/game/client/c_te_armorricochet.cpp
@@ -523,6 +564,7 @@ target_sources(client PRIVATE
     mp/src/game/client/c_te_fizz.cpp
     mp/src/game/client/c_te_glassshatter.cpp
     mp/src/game/client/c_te_glowsprite.cpp
+    mp/src/game/client/c_te_impact.cpp
     mp/src/game/client/c_te_killplayerattachments.cpp
     mp/src/game/client/c_te_largefunnel.cpp
     mp/src/game/client/c_te_legacytempents.cpp
@@ -538,14 +580,19 @@ target_sources(client PRIVATE
     mp/src/game/client/c_te_spritespray.cpp
     mp/src/game/client/c_te_worlddecal.cpp
     mp/src/game/client/c_team.cpp
+    mp/src/game/client/c_team_objectiveresource.cpp
+    mp/src/game/client/c_team_train_watcher.cpp
     mp/src/game/client/c_tracer.cpp
+    mp/src/game/client/c_ragdoll_manager.cpp
     mp/src/game/client/c_recipientfilter.cpp
     mp/src/game/client/c_rope.cpp
     mp/src/game/client/c_rumble.cpp
     mp/src/game/client/c_sprite.cpp
     mp/src/game/client/c_soundscape.cpp
+    mp/src/game/client/c_smoke_trail.cpp
     mp/src/game/client/c_user_message_register.cpp
     mp/src/game/client/c_vguiscreen.cpp
+    mp/src/game/client/c_vote_controller.cpp
     mp/src/game/client/c_world.cpp
     mp/src/game/client/cl_mat_stub.cpp
     mp/src/game/client/cdll_bounded_cvars.cpp
@@ -569,14 +616,19 @@ target_sources(client PRIVATE
     mp/src/game/client/entity_client_tools.cpp
     mp/src/game/client/flashlighteffect.cpp
     mp/src/game/client/fx.cpp
+    mp/src/game/client/fx_blood.cpp
     mp/src/game/client/fx_discreetline.cpp
     mp/src/game/client/fx_explosion.cpp
     mp/src/game/client/fx_fleck.cpp
+    mp/src/game/client/fx_impact.cpp
+    mp/src/game/client/fx_interpvalue.cpp
     mp/src/game/client/fx_line.cpp
     mp/src/game/client/fx_quad.cpp
     mp/src/game/client/fx_water.cpp
     mp/src/game/client/fx_sparks.cpp
     mp/src/game/client/fx_staticline.cpp
+    mp/src/game/client/fx_tracer.cpp
+    mp/src/game/client/fx_trail.cpp
     mp/src/game/client/gametrace_client.cpp
     mp/src/game/client/game_controls/basemodelpanel.cpp
     mp/src/game/client/game_controls/baseviewport.cpp
@@ -586,16 +638,40 @@ target_sources(client PRIVATE
     mp/src/game/client/game_controls/SpectatorGUI.cpp
     mp/src/game/client/game_controls/teammenu.cpp
     mp/src/game/client/game_controls/vguitextwindow.cpp
+    mp/src/game/client/geiger.cpp
     mp/src/game/client/glow_overlay.cpp
     mp/src/game/client/history_resource.cpp
+    mp/src/game/client/hl2/c_barnacle.cpp
     mp/src/game/client/hl2/c_basehlplayer.cpp
+    mp/src/game/client/hl2/c_corpse.cpp
     mp/src/game/client/hl2/c_hl2_playerlocaldata.cpp
+    mp/src/game/client/hl2/c_prop_combine_ball.cpp
+    mp/src/game/client/hl2/c_script_intro.cpp
     mp/src/game/client/hl2/c_te_concussiveexplosion.cpp
+    mp/src/game/client/hl2/c_waterbullet.cpp
+    mp/src/game/client/hl2/c_weapon_crossbow.cpp
+    mp/src/game/client/hl2/fx_hl2_impacts.cpp
+    mp/src/game/client/hl2/fx_hl2_tracers.cpp
     mp/src/game/client/hl2/hl_in_main.cpp
     mp/src/game/client/hl2/hl_prediction.cpp
     mp/src/game/client/hl2/hl2_clientmode.cpp
+    mp/src/game/client/hl2/hud_ammo.cpp
+    mp/src/game/client/hl2/hud_battery.cpp
+    mp/src/game/client/hl2/hud_blood.cpp
+    mp/src/game/client/hl2/hud_credits.cpp
+    mp/src/game/client/hl2/hud_damageindicator.cpp
+    mp/src/game/client/hl2/hud_flashlight.cpp
+    mp/src/game/client/hl2/hud_health.cpp
+    mp/src/game/client/hl2/hud_poisondamageindicator.cpp
+    mp/src/game/client/hl2/hud_quickinfo.cpp
+    mp/src/game/client/hl2/hud_suitpower.cpp
+    mp/src/game/client/hl2/hud_weaponselection.cpp
+    mp/src/game/client/hl2/hud_zoom.cpp
     mp/src/game/client/hl2/vgui_rootpanel_hl2.cpp
+    mp/src/game/client/hl2mp/c_hl2mp_player.cpp
+    mp/src/game/client/hl2mp/c_te_hl2mp_shotgun_shot.cpp
     mp/src/game/client/hl2mp/clientmode_hl2mpnormal.cpp
+    mp/src/game/client/hl2mp/hl2mp_hud_chat.cpp
     mp/src/game/client/hl2mp/ui/backgroundpanel.cpp
     mp/src/game/client/hl2mp/ui/hl2mpclientscoreboard.cpp
     mp/src/game/client/hl2mp/ui/hl2mptextwindow.cpp
@@ -603,9 +679,11 @@ target_sources(client PRIVATE
     mp/src/game/client/hud.cpp
     mp/src/game/client/hud_basechat.cpp
     mp/src/game/client/hud_closecaption.cpp
+    mp/src/game/client/hud_crosshair.cpp
     mp/src/game/client/hud_element_helper.cpp
     mp/src/game/client/hud_lcd.cpp
     mp/src/game/client/hud_msg.cpp
+    mp/src/game/client/hud_numericdisplay.cpp
     mp/src/game/client/hud_pdump.cpp
     mp/src/game/client/hud_redraw.cpp
     mp/src/game/client/in_camera.cpp
@@ -621,6 +699,7 @@ target_sources(client PRIVATE
     mp/src/game/client/mumble.cpp
     mp/src/game/client/panelmetaclassmgr.cpp
     mp/src/game/client/particlemgr.cpp
+    mp/src/game/client/particles_attractor.cpp
     mp/src/game/client/particles_ez.cpp
     mp/src/game/client/particles_localspace.cpp
     mp/src/game/client/particles_new.cpp
@@ -642,6 +721,7 @@ target_sources(client PRIVATE
     mp/src/game/client/studio_stats.cpp
     mp/src/game/client/text_message.cpp
     mp/src/game/client/toolframework_client.cpp
+    mp/src/game/client/train.cpp
     mp/src/game/client/vgui_debugoverlaypanel.cpp
     mp/src/game/client/view.cpp
     mp/src/game/client/view_beams.cpp
@@ -673,7 +753,12 @@ target_sources(client PRIVATE
     mp/src/game/shared/basecombatcharacter_shared.cpp
     mp/src/game/shared/basecombatweapon_shared.cpp
     mp/src/game/shared/baseentity_shared.cpp
+    mp/src/game/shared/basegrenade_shared.cpp
+    mp/src/game/shared/baseparticleentity.cpp
     mp/src/game/shared/baseplayer_shared.cpp
+    mp/src/game/shared/base_playeranimstate.cpp
+    mp/src/game/shared/baseprojectile.cpp
+    mp/src/game/shared/baseviewmodel_shared.cpp
     mp/src/game/shared/beam_shared.cpp
     mp/src/game/shared/cam_thirdperson.cpp
     mp/src/game/shared/choreoactor.cpp
@@ -685,6 +770,7 @@ target_sources(client PRIVATE
     mp/src/game/shared/decals.cpp
     mp/src/game/shared/effect_dispatch_data.cpp
     mp/src/game/shared/entitylist_base.cpp
+    mp/src/game/shared/EntityParticleTrail_Shared.cpp
     mp/src/game/shared/env_wind_shared.cpp
     mp/src/game/shared/env_detail_controller.cpp
     mp/src/game/shared/eventlist.cpp
@@ -705,27 +791,51 @@ target_sources(client PRIVATE
     mp/src/game/shared/particle_property.cpp
     mp/src/game/shared/particlesystemquery.cpp
     mp/src/game/client/perfvisualbenchmark.cpp
+    mp/src/game/shared/hl2/basehlcombatweapon_shared.cpp
     mp/src/game/shared/hl2/hl_gamemovement.cpp
+    mp/src/game/shared/hl2/hl2_gamerules.cpp
     mp/src/game/shared/hl2/hl2_usermessages.cpp
     mp/src/game/shared/hl2mp/hl2mp_gamerules.cpp
+    mp/src/game/shared/hl2mp/hl2mp_player_shared.cpp
     mp/src/game/shared/hl2mp/hl2mp_weapon_parse.cpp
+    mp/src/game/shared/hl2mp/weapon_357.cpp
+    mp/src/game/shared/hl2mp/weapon_ar2.cpp
+    mp/src/game/shared/hl2mp/weapon_crossbow.cpp
+    mp/src/game/shared/hl2mp/weapon_crowbar.cpp
+    mp/src/game/shared/hl2mp/weapon_frag.cpp
+    mp/src/game/shared/hl2mp/weapon_hl2mpbase.cpp
+    mp/src/game/shared/hl2mp/weapon_hl2mpbase_machinegun.cpp
+    mp/src/game/shared/hl2mp/weapon_hl2mpbasebasebludgeon.cpp
+    mp/src/game/shared/hl2mp/weapon_hl2mpbasehlmpcombatweapon.cpp
+    mp/src/game/shared/hl2mp/weapon_physcannon.cpp
+    mp/src/game/shared/hl2mp/weapon_pistol.cpp
+    mp/src/game/shared/hl2mp/weapon_rpg.cpp
+    mp/src/game/shared/hl2mp/weapon_shotgun.cpp
+    mp/src/game/shared/hl2mp/weapon_slam.cpp
+    mp/src/game/shared/hl2mp/weapon_smg1.cpp
+    mp/src/game/shared/hl2mp/weapon_stunstick.cpp
     mp/src/game/shared/physics_main_shared.cpp
     mp/src/game/shared/physics_saverestore.cpp
     mp/src/game/shared/physics_shared.cpp
     mp/src/game/shared/precache_register.cpp
     mp/src/game/shared/predictableid.cpp
     mp/src/game/shared/predictioncopy.cpp
+    mp/src/game/shared/predicted_viewmodel.cpp
     mp/src/game/shared/props_shared.cpp
     mp/src/game/shared/ragdoll_shared.cpp
     mp/src/game/shared/rope_helpers.cpp
     mp/src/game/shared/saverestore.cpp
     mp/src/game/shared/sequence_Transitioner.cpp
     mp/src/game/shared/sceneentity_shared.cpp
+    mp/src/game/shared/script_intro_shared.cpp
+    mp/src/game/shared/singleplay_gamerules.cpp
     mp/src/game/shared/SoundEmitterSystem.cpp
     mp/src/game/shared/soundenvelope.cpp
     mp/src/game/shared/Sprite.cpp
+    mp/src/game/shared/SpriteTrail.cpp
     mp/src/game/shared/studio_shared.cpp
     mp/src/game/shared/takedamageinfo.cpp
+    mp/src/game/shared/teamplayroundbased_gamerules.cpp
     mp/src/game/shared/usercmd.cpp
     mp/src/game/shared/usermessages.cpp
     mp/src/game/shared/util_shared.cpp
@@ -762,7 +872,10 @@ target_sources(client PRIVATE
     mp/src/public/SoundParametersInternal.cpp
     mp/src/public/studio.cpp
     mp/src/public/stringregistry.cpp
+    mp/src/public/strings.cpp
     mp/src/public/tools/bonelist.cpp
+    mp/src/public/valve_alloc.cpp
+    mp/src/public/valve_alloc_crt.cpp
     mp/src/public/vgui_controls/vgui_controls.cpp
     mp/src/tier1/bitbuf.cpp
     mp/src/tier1/byteswap.cpp
@@ -815,9 +928,8 @@ target_sources(client PRIVATE
     mp/src/vgui2/vgui_controls/ToggleButton.cpp
 )
 
+
 target_link_libraries(client PRIVATE
-    Rpcrt4.lib # UidCreate
-    legacy_stdio_definitions # _sscanf
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/dmxloader.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/particles.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/matsys_controls.lib
@@ -828,12 +940,19 @@ target_link_libraries(client PRIVATE
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/vstdlib.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/vtf.lib
     ${CMAKE_SOURCE_DIR}/mp/src/lib/public/vgui_controls.lib
+    Rpcrt4.lib # UidCreate
+    legacy_stdio_definitions.lib # _sscanf
+    legacy_stdio_wide_specifiers.lib
+    libcmt.lib
+    libcpmt.lib
+    libvcruntime.lib
+    libucrt.lib
 )
 
 target_link_options(client PRIVATE
     /SAFESEH:NO             # for matsys_controls.lib
-    /NODEFAULTLIB:libc
-    /NODEFAULTLIB:libcd
-    /NODEFAULTLIB:libcmt
-    /NODEFAULTLIB:libcmtd
+    /NODEFAULTLIB
+    # hopefully to force selection of particles.lib (conflicts with ucrt)
+    /INCLUDE:_hypot
+    /FORCE:MULTIPLE
 )

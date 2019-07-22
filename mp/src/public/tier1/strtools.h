@@ -1087,5 +1087,4 @@ size_t Q_URLDecode( OUT_CAP(nDecodeDestLen) char *pchDecodeDest, int nDecodeDest
 #define FMT_WS L"%s"
 #endif
 
-
 #endif	// TIER1_STRTOOLS_H
