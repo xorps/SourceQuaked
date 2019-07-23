@@ -19,6 +19,7 @@ ConVar    sk_plr_dmg_satchel		( "sk_plr_dmg_satchel","0");
 ConVar    sk_npc_dmg_satchel		( "sk_npc_dmg_satchel","0");
 ConVar    sk_satchel_radius			( "sk_satchel_radius","0");
 
+
 BEGIN_DATADESC( CSatchelCharge )
 
 	DEFINE_SOUNDPATCH( m_soundSlide ),
@@ -31,9 +32,9 @@ BEGIN_DATADESC( CSatchelCharge )
 	DEFINE_FIELD( m_bIsAttached, FIELD_BOOLEAN ),
 
 	// Function Pointers
-	DEFINE_FUNCTION( SatchelTouch ),
-	DEFINE_FUNCTION( SatchelThink ),
-	DEFINE_FUNCTION( SatchelUse ),
+	DEFINE_ENTITYFUNC( SatchelTouch ),
+	DEFINE_THINKFUNC( SatchelThink ),
+	DEFINE_USEFUNC( SatchelUse ),
 
 END_DATADESC()
 
@@ -61,9 +62,9 @@ void CSatchelCharge::Spawn( void )
 
 	UTIL_SetSize(this, Vector( -6, -6, -2), Vector(6, 6, 2));
 
-	SetTouch( SatchelTouch );
-	SetUse( SatchelUse );
-	SetThink( SatchelThink );
+	SetTouch( &CSatchelCharge::SatchelTouch );
+	SetUse( &CSatchelCharge::SatchelUse );
+	SetThink( &CSatchelCharge::SatchelThink );
 	SetNextThink( gpGlobals->curtime + 0.1f );
 
 	m_flDamage		= sk_plr_dmg_satchel.GetFloat();
@@ -114,7 +115,7 @@ void CSatchelCharge::KillSlideSound(void)
 void CSatchelCharge::SatchelUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	KillSlideSound();
-	SetThink( Detonate );
+	SetThink( &CSatchelCharge::Detonate );
 	SetNextThink( gpGlobals->curtime );
 }
 
