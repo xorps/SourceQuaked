@@ -590,6 +590,7 @@ target_sources(client PRIVATE
     mp/src/game/client/c_sprite.cpp
     mp/src/game/client/c_soundscape.cpp
     mp/src/game/client/c_smoke_trail.cpp
+    mp/src/game/client/c_stickybolt.cpp
     mp/src/game/client/c_user_message_register.cpp
     mp/src/game/client/c_vguiscreen.cpp
     mp/src/game/client/c_vote_controller.cpp
