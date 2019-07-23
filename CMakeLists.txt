@@ -155,6 +155,7 @@ target_sources(server PRIVATE
     mp/src/game/server/hl2/ai_behavior_actbusy.cpp
     mp/src/game/server/hl2/combine_mine.cpp
     mp/src/game/server/hl2/grenade_frag.cpp
+    mp/src/game/server/hl2/grenade_ar2.cpp
     mp/src/game/server/hl2/npc_barnacle.cpp
     mp/src/game/server/hl2/hl_playermove.cpp
     mp/src/game/server/hl2/hl2_eventlog.cpp
