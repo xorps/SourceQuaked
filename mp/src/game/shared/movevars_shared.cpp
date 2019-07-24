@@ -16,11 +16,16 @@
 #include "tier0/memdbgon.h"
 
 // some cvars used by player movement system
+#if 0
 #if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
 #define DEFAULT_GRAVITY_STRING	"600"
 #else
 #define DEFAULT_GRAVITY_STRING	"800"
 #endif
+#endif
+
+// SourceQuake default to 800 instead
+#define DEFAULT_GRAVITY_STRING "800"
 
 float GetCurrentGravity( void )
 {

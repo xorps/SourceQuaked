@@ -327,6 +327,7 @@ void CHL2MP_Player::Spawn(void)
 	m_iSpawnInterpCounter = (m_iSpawnInterpCounter + 1) % 8;
 
 	m_Local.m_bDucked = false;
+	m_Local.m_JumpHeld = false;
 
 	SetPlayerUnderwater(false);
 

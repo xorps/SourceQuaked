@@ -613,6 +613,265 @@ void DrawDispCollPlane( CBaseTrace *pTrace )
 }
 #endif
 
+namespace PM {
+	constexpr auto OVERCLIP = 1.001f;
+	constexpr auto STEPSIZE = 18;
+	cplane_t GroundPlane = {};
+	bool ActiveGroundPlane = false;
+
+	void ClipVelocity(const Vector& in, const Vector& normal, Vector& out, float overbounce)
+	{
+		vec_t backoff = DotProduct(in, normal);
+
+		if (backoff < 0) {
+			backoff *= overbounce;
+		}
+		else {
+			backoff /= overbounce;
+		}
+
+		vec_t change;
+		for (int i = 0; i < 3; i++) {
+			change = normal[i] * backoff;
+			out[i] = in[i] - change;
+		}
+	}
+
+	bool SlideMove(bool gravity, CGameMovement& gm, const float gameGravity, const float frametime)
+	{
+		CMoveData& mv = *gm.GetMoveData();
+		Vector& playerVelocity = mv.m_vecVelocity;
+		Vector primal_velocity = playerVelocity;
+		Vector endVelocity = playerVelocity;
+
+		if (gravity) {
+			endVelocity[2] -= gameGravity * frametime;
+			playerVelocity[2] = (playerVelocity[2] + endVelocity[2]) * 0.5;
+			primal_velocity[2] = endVelocity[2];
+			if (ActiveGroundPlane) {
+				ClipVelocity(playerVelocity, GroundPlane.normal, playerVelocity, OVERCLIP);
+			}
+		}
+
+		auto time_left = frametime;
+		int numplanes;
+		Vector planes[MAX_CLIP_PLANES];
+
+		// never turn against the ground plane
+		if (ActiveGroundPlane) {
+			numplanes = 1;
+			planes[0] = GroundPlane.normal;
+		}
+		else {
+			numplanes = 0;
+		}
+
+		// never turn against original velocity
+		planes[numplanes] = playerVelocity.Normalized();
+		numplanes++;
+		constexpr auto numbumps = 4;
+
+		int bumpcount;
+		for (bumpcount = 0; bumpcount < numbumps; bumpcount++) {
+			// calculate position we are trying to move to
+			Vector end;
+			VectorMA(mv.GetAbsOrigin(), time_left, playerVelocity, end);
+
+			// see if we can make it there
+			trace_t trace;
+			gm.TracePlayerBBox(mv.GetAbsOrigin(), end, gm.PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+
+			if (trace.allsolid) {
+				// entity is completely trapped in another solid
+				playerVelocity[2] = 0;
+				return true;
+			}
+
+			if (trace.fraction > 0) {
+				// actually covered some distance
+				mv.SetAbsOrigin(trace.endpos);
+			}
+
+			if (trace.fraction == 1) {
+				break; // moved the entire distance
+			}
+
+			// save entity for contact
+			MoveHelper()->AddToTouched(trace, playerVelocity);
+
+			time_left -= time_left * trace.fraction;
+
+			if (numplanes >= MAX_CLIP_PLANES) {
+				// this shouldn't really happen
+				VectorClear(playerVelocity);
+				return true;
+			}
+
+			//
+			// if this is the same plane we hit before, nudge velocity
+			// out along it, which fixes some epsilon issues with
+			// non-axial planes
+			//
+			int i;
+			for (i = 0; i < numplanes; i++) {
+				if (DotProduct(trace.plane.normal, planes[i]) > 0.99) {
+					VectorAdd(trace.plane.normal, playerVelocity, playerVelocity);
+					break;
+				}
+			}
+
+			if (i < numplanes) {
+				continue;
+			}
+
+			planes[numplanes] = trace.plane.normal;
+			numplanes++;
+
+			//
+			// modify velocity so it parallels all of the clip planes
+			//
+
+			// find a plane that it enters
+			for (int i = 0; i < numplanes; i++) {
+				auto into = DotProduct(playerVelocity, planes[i]);
+				if (into >= 0.1) {
+					continue;		// move doesn't interact with the plane
+				}
+
+				// see how hard we are hitting things
+				/*
+				if (-into > pml.impactSpeed) {
+					pml.impactSpeed = -into;
+				}
+				*/
+
+				// slide along the plane
+				Vector clipVelocity;
+				ClipVelocity(playerVelocity, planes[i], clipVelocity, OVERCLIP);
+
+				// slide along the plane
+				Vector endClipVelocity;
+				ClipVelocity(endVelocity, planes[i], endClipVelocity, OVERCLIP);
+
+				// see if there is a second plane that the new move enters
+				for (int j = 0; j < numplanes; j++) {
+					if (j == i) {
+						continue;
+					}
+
+					if (DotProduct(clipVelocity, planes[j]) >= 0.1) {
+						continue;		// move doesn't interact with the plane
+					}
+
+					// try clipping the move to the plane
+					ClipVelocity(clipVelocity, planes[j], clipVelocity, OVERCLIP);
+					ClipVelocity(endClipVelocity, planes[j], endClipVelocity, OVERCLIP);
+
+
+					// see if it goes back into the first clip plane
+					if (DotProduct(clipVelocity, planes[i]) >= 0) {
+						continue;
+					}
+
+
+					// slide the original velocity along the crease
+					Vector dir;
+					CrossProduct(planes[i], planes[j], dir);
+					VectorNormalize(dir);
+					auto d = DotProduct(dir, playerVelocity);
+					VectorScale(dir, d, clipVelocity);
+
+
+					CrossProduct(planes[i], planes[j], dir);
+					VectorNormalize(dir);
+					d = DotProduct(dir, endVelocity);
+					VectorScale(dir, d, endClipVelocity);
+
+					// see if there is a third plane the the new move enters
+					for (int k = 0; k < numplanes; k++) {
+						if (k == i || k == j) {
+							continue;
+						}
+
+						if (DotProduct(clipVelocity, planes[k]) >= 0.1) {
+							continue;		// move doesn't interact with the plane
+						}
+
+						// stop dead at a tripple plane interaction
+						VectorClear(playerVelocity);
+						return true;
+					}
+				}
+
+				// if we have fixed all interactions, try another move
+				VectorCopy(clipVelocity, playerVelocity);
+				VectorCopy(endClipVelocity, endVelocity);
+				break;
+			}
+		}
+
+		if (gravity) {
+			playerVelocity = endVelocity;
+		}
+
+		// don't change velocity if in a timer (FIXME: is this correct?)
+		// ...
+
+		return bumpcount != 0;
+	}
+
+	void StepSlideMove(bool gravity, CGameMovement& gm, const float gameGravity, const float frametime)
+	{
+		Vector start_o = gm.GetMoveData()->GetAbsOrigin();
+		Vector start_v = gm.GetMoveData()->m_vecVelocity;
+		Vector& playerVelocity = gm.GetMoveData()->m_vecVelocity;
+
+		if (!SlideMove(gravity, gm, gameGravity, frametime)) {
+			return; // we got exactly where we wanted to go first try
+		}
+
+		Vector down = start_o;
+		down[2] -= STEPSIZE;
+		trace_t trace;
+		gm.TracePlayerBBox(start_o, down, gm.PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		Vector up(0, 0, 1);
+		// never step up when you still have up velocity
+		if (playerVelocity[2] > 0 && (trace.fraction == 1.0 || DotProduct(trace.plane.normal, up) < 0.7)) {
+			return;
+		}
+
+		Vector down_o = gm.GetMoveData()->GetAbsOrigin();
+		Vector down_v = gm.GetMoveData()->m_vecVelocity;
+
+		up = start_o;
+		up[2] += STEPSIZE;
+
+		// test the player position if they were a stepheight higher
+		gm.TracePlayerBBox(start_o, up, gm.PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		if (trace.allsolid) {
+			return; // can't step up
+		}
+
+		auto stepSize = trace.endpos[2] - start_o[2];
+		// try slidemove from this position
+		gm.GetMoveData()->SetAbsOrigin(trace.endpos);
+		gm.GetMoveData()->m_vecVelocity = start_v;
+
+		SlideMove(gravity, gm, gameGravity, frametime);
+
+		// push down the final amount
+		down = gm.GetMoveData()->GetAbsOrigin();
+		down[2] -= stepSize;
+		gm.TracePlayerBBox(gm.GetMoveData()->GetAbsOrigin(), down, gm.PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		if (!trace.allsolid) {
+			gm.GetMoveData()->SetAbsOrigin(trace.endpos);
+		}
+		if (trace.fraction < 1.0) {
+			ClipVelocity(gm.GetMoveData()->m_vecVelocity, trace.plane.normal, gm.GetMoveData()->m_vecVelocity, OVERCLIP);
+		}
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Constructs GameMovement interface
 //-----------------------------------------------------------------------------
@@ -1719,7 +1978,12 @@ void CGameMovement::AirAccelerate( Vector& wishdir, float wishspeed, float accel
 		return;
 
 	// Cap speed
+	/* SourceQuake: Commenting out
 	if ( wishspd > GetAirSpeedCap() )
+		wishspd = GetAirSpeedCap();
+	*/
+
+	if ((mv->m_nButtons & IN_ATTACK3) && wishspd > GetAirSpeedCap())
 		wishspd = GetAirSpeedCap();
 
 	// Determine veer amount
@@ -1787,12 +2051,21 @@ void CGameMovement::AirMove( void )
 		wishspeed = mv->m_flMaxSpeed;
 	}
 	
-	AirAccelerate( wishdir, wishspeed, sv_airaccelerate.GetFloat() );
+	AirAccelerate( wishdir, wishspeed, (mv->m_nButtons & IN_ATTACK3) ? sv_airaccelerate.GetFloat() : 1.0f );
 
 	// Add in any base velocity to the current velocity.
 	VectorAdd(mv->m_vecVelocity, player->GetBaseVelocity(), mv->m_vecVelocity );
 
+	// we may have a ground plane that is very steep, even
+	// though we don't have a groundentity
+	// slide along the steep plane
+//	if (PM::ActiveGroundPlane) {
+//		PM::ClipVelocity(mv->m_vecVelocity, PM::GroundPlane.normal, mv->m_vecVelocity, PM::OVERCLIP);
+//	}
+
 	TryPlayerMove();
+
+//	PM::StepSlideMove(false, *this, GetCurrentGravity(), gpGlobals->frametime);
 
 	// Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
 	VectorSubtract( mv->m_vecVelocity, player->GetBaseVelocity(), mv->m_vecVelocity );
@@ -2062,6 +2335,7 @@ void CGameMovement::FullWalkMove( )
 		}
 		else
 		{
+			player->m_Local.m_JumpHeld = false;
 			mv->m_nOldButtons &= ~IN_JUMP;
 		}
 
@@ -2087,6 +2361,7 @@ void CGameMovement::FullWalkMove( )
 		}
 		else
 		{
+			player->m_Local.m_JumpHeld = false;
 			mv->m_nOldButtons &= ~IN_JUMP;
 		}
 
@@ -2404,7 +2679,12 @@ bool CGameMovement::CheckJumpButton( void )
 		return false;
 #endif
 
+	/* SourceQuake: commenting out 
 	if ( mv->m_nOldButtons & IN_JUMP )
+		return false;		// don't pogo stick 
+	*/
+
+	if (player->m_Local.m_JumpHeld)
 		return false;		// don't pogo stick
 
 	// Cannot jump will in the unduck transition.
@@ -2418,6 +2698,8 @@ bool CGameMovement::CheckJumpButton( void )
 
 	// In the air now.
     SetGroundEntity( NULL );
+
+	player->m_Local.m_JumpHeld = true;
 	
 	player->PlayStepSound( (Vector &)mv->GetAbsOrigin(), player->m_pSurfaceData, 1.0, true );
 	
@@ -2429,6 +2711,7 @@ bool CGameMovement::CheckJumpButton( void )
 		flGroundFactor = player->m_pSurfaceData->game.jumpFactor; 
 	}
 
+#if 0 // SourceQuake Comment out
 	float flMul;
 	if ( g_bMovementOptimizations )
 	{
@@ -2445,6 +2728,10 @@ bool CGameMovement::CheckJumpButton( void )
 	{
 		flMul = sqrt(2 * GetCurrentGravity() * GAMEMOVEMENT_JUMP_HEIGHT);
 	}
+#endif
+
+	// SourceQuake
+	float flMul = 270.0f;
 
 	// Acclerate upward
 	// If we are ducking...
@@ -2465,6 +2752,7 @@ bool CGameMovement::CheckJumpButton( void )
 	}
 
 	// Add a little forward velocity based on your current forward velocity - if you are not sprinting.
+#if 0 // SourceQuaked - commenting this out
 #if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
 	if ( gpGlobals->maxClients == 1 )
 	{
@@ -2493,6 +2781,7 @@ bool CGameMovement::CheckJumpButton( void )
 		// Add it on
 		VectorAdd( (vecForward*flSpeedAddition), mv->m_vecVelocity, mv->m_vecVelocity );
 	}
+#endif
 #endif
 
 	FinishGravity();
@@ -2544,6 +2833,7 @@ void CGameMovement::FullLadderMove()
 	}
 	else
 	{
+		player->m_Local.m_JumpHeld = false;
 		mv->m_nOldButtons &= ~IN_JUMP;
 	}
 	
@@ -3628,6 +3918,9 @@ void CGameMovement::SetGroundEntity( trace_t *pm )
 
 		mv->m_vecVelocity.z = 0.0f;
 	}
+
+	PM::ActiveGroundPlane = pm != nullptr;
+	PM::GroundPlane = pm ? pm->plane : cplane_t{};
 }
 
 //-----------------------------------------------------------------------------

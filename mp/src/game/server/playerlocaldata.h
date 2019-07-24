@@ -84,6 +84,7 @@ public:
 	CNetworkVarEmbedded( audioparams_t, m_audio );
 
 	CNetworkVar( bool, m_bSlowMovement );
+	CNetworkVar( bool, m_JumpHeld );
 };
 
 EXTERN_SEND_TABLE(DT_Local);

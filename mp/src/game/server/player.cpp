@@ -4972,6 +4972,7 @@ void CBasePlayer::Spawn( void )
 
 	m_Local.m_bDucked = false;// This will persist over round restart if you hold duck otherwise. 
 	m_Local.m_bDucking = false;
+	m_Local.m_JumpHeld = false;
     SetViewOffset( VEC_VIEW_SCALED( this ) );
 	Precache();
 	
@@ -5483,6 +5484,7 @@ bool CBasePlayer::GetInVehicle( IServerVehicle *pVehicle, int nRole )
 	m_Local.m_flDucktime = 0.0f;
 	m_Local.m_flDuckJumpTime = 0.0f;
 	m_Local.m_flJumpTime = 0.0f;
+	m_Local.m_JumpHeld = false;
 
 	// Turn our toggled duck off
 	if ( GetToggledDuckState() )
