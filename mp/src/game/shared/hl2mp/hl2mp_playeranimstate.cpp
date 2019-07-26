@@ -18,7 +18,7 @@
 #endif
 
 #define HL2MP_RUN_SPEED				320.0f
-#define HL2MP_WALK_SPEED			75.0f
+#define HL2MP_WALK_SPEED			320.0f
 #define HL2MP_CROUCHWALK_SPEED		110.0f
 
 //-----------------------------------------------------------------------------
