@@ -44,6 +44,7 @@ target_include_directories(server PRIVATE
     mp/src/game/shared
     mp/src/game/shared/hl2
     mp/src/game/shared/hl2mp
+    mp/src/game/shared/Multiplayer
     mp/src/game/client
 )
 
@@ -166,6 +167,7 @@ target_sources(server PRIVATE
     mp/src/game/server/hl2/prop_combine_ball.cpp
     mp/src/game/server/hl2/script_intro.cpp
     mp/src/game/server/hl2/te_gaussexplosion.cpp
+    mp/src/game/server/hl2mp/grenade_tripmine.cpp
     mp/src/game/server/hl2mp/hl2mp_client.cpp
     mp/src/game/server/hl2mp/hl2mp_cvars.cpp
     mp/src/game/server/hl2mp/hl2mp_gameinterface.cpp
@@ -333,6 +335,7 @@ target_sources(server PRIVATE
     mp/src/game/shared/hl2/hl2_usermessages.cpp
     mp/src/game/shared/hl2mp/hl2mp_gamerules.cpp
     mp/src/game/shared/hl2mp/hl2mp_player_shared.cpp
+    mp/src/game/shared/hl2mp/hl2mp_playeranimstate.cpp
     mp/src/game/shared/hl2mp/hl2mp_weapon_parse.cpp
     mp/src/game/shared/hl2mp/weapon_357.cpp
     mp/src/game/shared/hl2mp/weapon_ar2.cpp
@@ -350,6 +353,7 @@ target_sources(server PRIVATE
     mp/src/game/shared/hl2mp/weapon_slam.cpp
     mp/src/game/shared/hl2mp/weapon_smg1.cpp
     mp/src/game/shared/hl2mp/weapon_stunstick.cpp
+    mp/src/game/shared/Multiplayer/multiplayer_animstate.cpp
     mp/src/game/shared/igamesystem.cpp
     mp/src/game/shared/interval.cpp
     mp/src/game/shared/mapentities_shared.cpp
@@ -490,6 +494,7 @@ target_include_directories(client PRIVATE
     mp/src/game/shared
     mp/src/game/shared/hl2
     mp/src/game/shared/hl2mp
+    mp/src/game/shared/Multiplayer
     mp/src/game/client
     mp/src/game/client/game_controls
     mp/src/game/client/hl2
@@ -801,6 +806,7 @@ target_sources(client PRIVATE
     mp/src/game/shared/hl2/hl2_usermessages.cpp
     mp/src/game/shared/hl2mp/hl2mp_gamerules.cpp
     mp/src/game/shared/hl2mp/hl2mp_player_shared.cpp
+    mp/src/game/shared/hl2mp/hl2mp_playeranimstate.cpp
     mp/src/game/shared/hl2mp/hl2mp_weapon_parse.cpp
     mp/src/game/shared/hl2mp/weapon_357.cpp
     mp/src/game/shared/hl2mp/weapon_ar2.cpp
@@ -818,6 +824,7 @@ target_sources(client PRIVATE
     mp/src/game/shared/hl2mp/weapon_slam.cpp
     mp/src/game/shared/hl2mp/weapon_smg1.cpp
     mp/src/game/shared/hl2mp/weapon_stunstick.cpp
+    mp/src/game/shared/Multiplayer/multiplayer_animstate.cpp
     mp/src/game/shared/physics_main_shared.cpp
     mp/src/game/shared/physics_saverestore.cpp
     mp/src/game/shared/physics_shared.cpp
