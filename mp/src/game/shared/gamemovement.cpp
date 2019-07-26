@@ -2622,6 +2622,52 @@ void CGameMovement::PlaySwimSound()
 	MoveHelper()->StartSound( mv->GetAbsOrigin(), "Player.Swim" );
 }
 
+static bool HitWall(const CBasePlayer& player, const CMoveData& mv, const Vector& dir)
+{
+	trace_t result;
+	UTIL_TraceLine(mv.GetAbsOrigin(), mv.GetAbsOrigin() + dir, MASK_PLAYERSOLID, &player, COLLISION_GROUP_PLAYER_MOVEMENT, &result);
+	return result.fraction < 1;
+}
+
+ConVar rebound_power("rebound_power", "300", FCVAR_REPLICATED | FCVAR_NOTIFY);
+ConVar rebound_power_up("rebound_power_up", "180", FCVAR_REPLICATED | FCVAR_NOTIFY);
+
+static bool CheckWallJump(const CBasePlayer& player, CMoveData& mv)
+{
+//	constexpr auto REBOUND_POWER = 300;
+//	constexpr auto REBOUND_POWER_UP = 180;
+	const int REBOUND_POWER = rebound_power.GetInt();
+	const int REBOUND_POWER_UP = rebound_power_up.GetInt();
+
+	Vector forward;
+	Vector right;
+	Vector up;
+
+	AngleVectors(mv.m_vecViewAngles, &forward, &right, &up);
+
+	forward.NormalizeInPlace();
+	right.NormalizeInPlace();
+	up.NormalizeInPlace();
+
+	if ((mv.m_nButtons & IN_MOVERIGHT) && HitWall(player, mv, right * -24))
+	{
+		Vector newVelocity = mv.m_vecVelocity + (right * REBOUND_POWER);
+		newVelocity.z += REBOUND_POWER_UP;
+		mv.m_vecVelocity = newVelocity;
+	}
+	else if ((mv.m_nButtons & IN_MOVELEFT) && HitWall(player, mv, right * 24))
+	{
+		Vector newVelocity = mv.m_vecVelocity + (right * -REBOUND_POWER);
+		newVelocity.z += REBOUND_POWER_UP;
+		mv.m_vecVelocity = newVelocity;
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2666,12 +2712,14 @@ bool CGameMovement::CheckJumpButton( void )
 		return false;
 	}
 
+	/* SourceQuake: moving further down
 	// No more effect
  	if (player->GetGroundEntity() == NULL)
 	{
 		mv->m_nOldButtons |= IN_JUMP;
 		return false;		// in air, so no effect
 	}
+	*/
 
 	// Don't allow jumping when the player is in a stasis field.
 #ifndef HL2_EPISODIC
@@ -2695,6 +2743,14 @@ bool CGameMovement::CheckJumpButton( void )
 	if ( player->m_Local.m_flDuckJumpTime > 0.0f )
 		return false;
 
+	bool wallJumped = false;
+
+	// No more effect
+	if (player->GetGroundEntity() == NULL && !(wallJumped = CheckWallJump(*player, *mv)))
+	{
+		mv->m_nOldButtons |= IN_JUMP;
+		return false;		// in air, so no effect
+	}
 
 	// In the air now.
     SetGroundEntity( NULL );
@@ -2736,19 +2792,22 @@ bool CGameMovement::CheckJumpButton( void )
 	// Acclerate upward
 	// If we are ducking...
 	float startz = mv->m_vecVelocity[2];
-	if ( (  player->m_Local.m_bDucking ) || (  player->GetFlags() & FL_DUCKING ) )
+	if (!wallJumped)
 	{
-		// d = 0.5 * g * t^2		- distance traveled with linear accel
-		// t = sqrt(2.0 * 45 / g)	- how long to fall 45 units
-		// v = g * t				- velocity at the end (just invert it to jump up that high)
-		// v = g * sqrt(2.0 * 45 / g )
-		// v^2 = g * g * 2.0 * 45 / g
-		// v = sqrt( g * 2.0 * 45 )
-		mv->m_vecVelocity[2] = flGroundFactor * flMul;  // 2 * gravity * height
-	}
-	else
-	{
-		mv->m_vecVelocity[2] += flGroundFactor * flMul;  // 2 * gravity * height
+		if ((player->m_Local.m_bDucking) || (player->GetFlags() & FL_DUCKING))
+		{
+			// d = 0.5 * g * t^2		- distance traveled with linear accel
+			// t = sqrt(2.0 * 45 / g)	- how long to fall 45 units
+			// v = g * t				- velocity at the end (just invert it to jump up that high)
+			// v = g * sqrt(2.0 * 45 / g )
+			// v^2 = g * g * 2.0 * 45 / g
+			// v = sqrt( g * 2.0 * 45 )
+			mv->m_vecVelocity[2] = flGroundFactor * flMul;  // 2 * gravity * height
+		}
+		else
+		{
+			mv->m_vecVelocity[2] += flGroundFactor * flMul;  // 2 * gravity * height
+		}
 	}
 
 	// Add a little forward velocity based on your current forward velocity - if you are not sprinting.
