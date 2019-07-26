@@ -689,6 +689,7 @@ target_sources(client PRIVATE
     mp/src/game/client/hud_numericdisplay.cpp
     mp/src/game/client/hud_pdump.cpp
     mp/src/game/client/hud_redraw.cpp
+    mp/src/game/client/hud_weapon.cpp
     mp/src/game/client/in_camera.cpp
     mp/src/game/client/in_joystick.cpp
     mp/src/game/client/in_main.cpp
